@@ -763,10 +763,15 @@ cb:
         command: "cat /var/lib/cloudera-scm-agent/active_parcels.json | jq -r '.CDH'"
         commandVersionPattern: "(.*)-.*"
         prewarmed: true
-      - name: cm
+      - name: cm-agent
         pkg:
-          - name: cloudera-manager-agent
-            pattern: "(.*)-.*"
+          name: cloudera-manager-agent
+          pattern: "(.*)-(.*)\\..*"
+        prewarmed: true
+      - name: cm-server
+        pkg:
+          name: cloudera-manager-server
+          pattern: "(.*)-(.*)\\..*"
         prewarmed: true
   paywall.url: "https://archive.cloudera.com/p/cdp-public/"
   nodestatus:

@@ -1,5 +1,6 @@
 package com.sequenceiq.cloudbreak.service.upgrade.sync.component;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -11,7 +12,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import com.sequenceiq.cloudbreak.common.model.PackageInfo;
 import com.sequenceiq.cloudbreak.domain.stack.Stack;
+import com.sequenceiq.cloudbreak.orchestrator.exception.CloudbreakOrchestratorFailedException;
 import com.sequenceiq.cloudbreak.service.cluster.ClusterApiConnectors;
 import com.sequenceiq.cloudbreak.service.upgrade.sync.common.ParcelInfo;
 
@@ -22,6 +25,9 @@ public class CmServerQueryService {
 
     @Inject
     private ClusterApiConnectors apiConnectors;
+
+    @Inject
+    private CmVersionQueryService cmVersionQueryService;
 
     /**
      * Will query all active parcels (CDH and non-CDH as well) from the CM server. Received format:
@@ -46,9 +52,16 @@ public class CmServerQueryService {
      * @return The actual CM version
      */
     Optional<String> queryCmVersion(Stack stack) {
-        Optional<String> cmVersionOptional = apiConnectors.getConnector(stack).clusterStatusService().getClusterManagerVersion();
-        LOGGER.debug("Reading CM version info from CM server, found version: {}", cmVersionOptional);
-        return cmVersionOptional;
+        try {
+            Map<String, List<PackageInfo>> packageVersions = cmVersionQueryService.queryCmPackageInfo(stack);
+            cmVersionQueryService.checkCmPackageInfoConsistency(packageVersions);
+        } catch (CloudbreakOrchestratorFailedException e) {
+            throw new RuntimeException(e);
+        }
+        return null;
+//        Optional<String> cmVersionOptional = apiConnectors.getConnector(stack).clusterStatusService().getClusterManagerVersion();
+//        LOGGER.debug("Reading CM version info from CM server, found version: {}", cmVersionOptional);
+//        return cmVersionOptional;
     }
 
     public boolean isCmServerRunning(Stack stack) {

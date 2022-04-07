@@ -49,8 +49,9 @@ public class MixedPackageVersionService {
     @Inject
     private CandidateImageAwareMixedPackageVersionService candidateImageAwareMixedPackageVersionService;
 
-    public void validatePackageVersions(Long stackId, CmSyncOperationResult syncResult, Set<Image> candidateImages) {
+    public Image validatePackageVersions(Long stackId, CmSyncOperationResult syncResult, Set<Image> candidateImages) {
         Optional<String> activeCmVersion = syncResult.getCmRepoSyncOperationResult().getInstalledCmVersion();
+//        ParcelInfoResponse activeCm = syncResult.getCmRepoSyncOperationResult().getFoundClouderaManagerRepo().ifPresentOrElse();
         if (activeCmVersion.isPresent()) {
             Set<ParcelInfo> activeParcels = syncResult.getCmParcelSyncOperationResult().getActiveParcels();
             Optional<StatedImage> currentImage = findCurrentImage(stackId);
@@ -69,6 +70,7 @@ public class MixedPackageVersionService {
         } else {
             LOGGER.warn("The validation of the package versions cannot be performed because the CM version is not present in the sync result. {}", syncResult);
         }
+        return null;
     }
 
     private Optional<Image> findTargetImage(Long stackId) {

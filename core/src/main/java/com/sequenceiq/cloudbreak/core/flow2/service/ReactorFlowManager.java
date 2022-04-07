@@ -58,6 +58,7 @@ import com.sequenceiq.cloudbreak.core.flow2.event.StackDownscaleTriggerEvent;
 import com.sequenceiq.cloudbreak.core.flow2.event.StackImageUpdateTriggerEvent;
 import com.sequenceiq.cloudbreak.core.flow2.event.StackLoadBalancerUpdateTriggerEvent;
 import com.sequenceiq.cloudbreak.core.flow2.event.StackSyncTriggerEvent;
+import com.sequenceiq.cloudbreak.core.flow2.stack.image.update.StackImageUpdateEvent;
 import com.sequenceiq.cloudbreak.core.flow2.stack.termination.StackTerminationEvent;
 import com.sequenceiq.cloudbreak.domain.stack.Stack;
 import com.sequenceiq.cloudbreak.logger.MDCBuilder;
@@ -324,6 +325,15 @@ public class ReactorFlowManager {
         String selector = FlowChainTriggers.STACK_IMAGE_UPDATE_TRIGGER_EVENT;
         return reactorNotifier.notify(imageChangeDto.getStackId(), selector, new StackImageUpdateTriggerEvent(selector, imageChangeDto));
     }
+
+    public FlowIdentifier triggerStackImageUpdateWithoutSync(ImageChangeDto imageChangeDto) {
+//        StackImageUpdateTriggerEvent(StackImageUpdateEvent.STACK_IMAGE_UPDATE_EVENT.event()
+
+        String selector = StackImageUpdateEvent.STACK_IMAGE_UPDATE_EVENT.event();
+        return reactorNotifier.notify(imageChangeDto.getStackId(), selector, new StackImageUpdateTriggerEvent(selector, imageChangeDto));
+    }
+
+
 
     public FlowIdentifier triggerMaintenanceModeValidationFlow(Long stackId) {
         String selector = FlowChainTriggers.CLUSTER_MAINTENANCE_MODE_VALIDATION_TRIGGER_EVENT;

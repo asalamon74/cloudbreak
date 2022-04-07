@@ -30,6 +30,7 @@ import com.sequenceiq.cloudbreak.core.flow2.externaldatabase.stop.config.Externa
 import com.sequenceiq.cloudbreak.core.flow2.externaldatabase.terminate.config.ExternalDatabaseTerminationEvent;
 import com.sequenceiq.cloudbreak.core.flow2.externaldatabase.terminate.config.ExternalDatabaseTerminationFlowConfig;
 import com.sequenceiq.cloudbreak.core.flow2.stack.downscale.StackDownscaleConfig;
+import com.sequenceiq.cloudbreak.core.flow2.stack.image.update.StackImageUpdateEvent;
 import com.sequenceiq.cloudbreak.core.flow2.stack.instance.termination.InstanceTerminationFlowConfig;
 import com.sequenceiq.cloudbreak.core.flow2.stack.migration.AwsVariantMigrationFlowConfig;
 import com.sequenceiq.cloudbreak.core.flow2.stack.provision.StackCreationFlowConfig;
@@ -54,7 +55,8 @@ public class CloudbreakFlowInformation implements ApplicationFlowInformation {
             ClusterTerminationEvent.TERMINATION_EVENT.event(),
             ExternalDatabaseTerminationEvent.START_EXTERNAL_DATABASE_TERMINATION_EVENT.event(),
             StackTerminationEvent.TERMINATION_EVENT.event(),
-            ClusterTerminationEvent.PROPER_TERMINATION_EVENT.event());
+            ClusterTerminationEvent.PROPER_TERMINATION_EVENT.event(),
+            StackImageUpdateEvent.STACK_IMAGE_UPDATE_EVENT.event());
 
     private static final List<Class<? extends FlowConfiguration<?>>> RESTARTABLE_FLOWS = Arrays.asList(
             StackCreationFlowConfig.class,

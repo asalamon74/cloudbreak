@@ -43,6 +43,18 @@ public class CmSyncActions {
         };
     }
 
+//    @Bean(name = "CM_SYNC_CHANGE_IMAGE_STATE")
+//    public Action<?, ?> changeImage() {
+//        return new AbstractCmSyncAction<>(CmSyncResult.class) {
+//
+//            @Override
+//            protected void doExecute(CmSyncContext context, CmSyncResult payload, Map<Object, Object> variables) {
+//                CmSyncRequest cmSyncRequest = new CmSyncRequest(context.getStack().getId(), payload.getCandidateImageUuids(), context.getFlowTriggerUserCrn());
+//                sendEvent(context, cmSyncRequest.selector(), cmSyncRequest);
+//            }
+//        };
+//    }
+
     @Bean(name = "CM_SYNC_FINISHED_STATE")
     public Action<?, ?> finishCmSync() {
         return new AbstractCmSyncAction<>(CmSyncResult.class) {

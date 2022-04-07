@@ -44,7 +44,7 @@ public class CandidateImageAwareMixedPackageVersionService {
     public void examinePackageVersionsWithAllCandidateImages(Long stackId, Set<Image> candidateImages, String currentCmVersion, Set<ParcelInfo> activeParcels,
             String imageCatalogUrl) {
         LOGGER.debug("Target image not found for cluster therefore comparing package versions with other candidate images.");
-        if (areComponentVersionsMatchWithAnyImage(activeParcels, currentCmVersion, candidateImages)) {
+        if (componentVersionsMatchWithAnyImage(activeParcels, currentCmVersion, candidateImages)) {
             LOGGER.debug("The combination of the cluster package versions are compatible.");
         } else {
             Set<Image> imagesWithSameCmVersion = getImageByCurrentCmVersion(currentCmVersion, candidateImages);
@@ -66,7 +66,7 @@ public class CandidateImageAwareMixedPackageVersionService {
         }
     }
 
-    private boolean areComponentVersionsMatchWithAnyImage(Set<ParcelInfo> activeParcels, String cmVersion, Set<Image> images) {
+    private boolean componentVersionsMatchWithAnyImage(Set<ParcelInfo> activeParcels, String cmVersion, Set<Image> images) {
         return images.stream().anyMatch(image -> cmVersion.equals(getCmVersion(image.getPackageVersions())) && matchParcelVersions(activeParcels, image));
     }
 
