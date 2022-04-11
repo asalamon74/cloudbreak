@@ -62,6 +62,7 @@ import static com.sequenceiq.cloudbreak.auth.altus.model.Entitlement.CDP_RAW_S3;
 import static com.sequenceiq.cloudbreak.auth.altus.model.Entitlement.CDP_RUNTIME_UPGRADE;
 import static com.sequenceiq.cloudbreak.auth.altus.model.Entitlement.CDP_RUNTIME_UPGRADE_DATAHUB;
 import static com.sequenceiq.cloudbreak.auth.altus.model.Entitlement.CDP_SAAS;
+import static com.sequenceiq.cloudbreak.auth.altus.model.Entitlement.CDP_SAAS_SDX_INTEGRATION;
 import static com.sequenceiq.cloudbreak.auth.altus.model.Entitlement.CDP_SDX_HBASE_CLOUD_STORAGE;
 import static com.sequenceiq.cloudbreak.auth.altus.model.Entitlement.CDP_SHOW_CLI;
 import static com.sequenceiq.cloudbreak.auth.altus.model.Entitlement.CDP_TARGETED_UPSCALE;
@@ -509,6 +510,9 @@ public class MockUserManagementService extends UserManagementImplBase {
     @Value("${auth.mock.freeipa.usersync.thread.timeout.enable}")
     private boolean enableFreeipaUsersyncTimeout;
 
+    @Value("${auth.mock.saas.sdx.integration.enable}")
+    private boolean enableSdxSaasIntegration;
+
     @PostConstruct
     public void init() {
         cbLicense = getLicense();
@@ -934,6 +938,9 @@ public class MockUserManagementService extends UserManagementImplBase {
         }
         if (enableWorkloadIamSync) {
             builder.addEntitlements(createEntitlement(WORKLOAD_IAM_SYNC));
+        }
+        if (enableSdxSaasIntegration) {
+            builder.addEntitlements(createEntitlement(CDP_SAAS_SDX_INTEGRATION));
         }
         responseObserver.onNext(
                 GetAccountResponse.newBuilder()
