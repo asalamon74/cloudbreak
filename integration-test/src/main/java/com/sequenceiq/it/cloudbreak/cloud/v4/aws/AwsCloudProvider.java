@@ -4,6 +4,7 @@ import static java.lang.String.format;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -42,8 +43,6 @@ import com.sequenceiq.environment.api.v1.environment.model.request.aws.AwsEnviro
 import com.sequenceiq.environment.api.v1.environment.model.request.aws.AwsFreeIpaParameters;
 import com.sequenceiq.environment.api.v1.environment.model.request.aws.AwsFreeIpaSpotParameters;
 import com.sequenceiq.environment.api.v1.environment.model.request.aws.S3GuardRequestParameters;
-import com.sequenceiq.freeipa.api.v1.freeipa.stack.model.common.network.AwsNetworkParameters;
-import com.sequenceiq.freeipa.api.v1.freeipa.stack.model.common.network.NetworkRequest;
 import com.sequenceiq.it.cloudbreak.CloudbreakClient;
 import com.sequenceiq.it.cloudbreak.cloud.v4.AbstractCloudProvider;
 import com.sequenceiq.it.cloudbreak.context.TestContext;
@@ -64,7 +63,6 @@ import com.sequenceiq.it.cloudbreak.dto.distrox.instancegroup.DistroXRootVolumeT
 import com.sequenceiq.it.cloudbreak.dto.distrox.instancegroup.DistroXVolumeTestDto;
 import com.sequenceiq.it.cloudbreak.dto.environment.EnvironmentNetworkTestDto;
 import com.sequenceiq.it.cloudbreak.dto.environment.EnvironmentTestDto;
-import com.sequenceiq.it.cloudbreak.dto.freeipa.FreeIpaTestDto;
 import com.sequenceiq.it.cloudbreak.dto.imagecatalog.ImageCatalogTestDto;
 import com.sequenceiq.it.cloudbreak.dto.sdx.SdxCloudStorageTestDto;
 import com.sequenceiq.it.cloudbreak.dto.stack.StackTestDtoBase;
@@ -187,16 +185,6 @@ public class AwsCloudProvider extends AbstractCloudProvider {
     public DistroXRootVolumeTestDto distroXRootVolume(DistroXRootVolumeTestDto distroXRootVolume) {
         int rootVolumeSize = awsProperties.getInstance().getRootVolumeSize();
         return distroXRootVolume.withSize(rootVolumeSize);
-    }
-
-    @Override
-    public NetworkRequest networkRequest(FreeIpaTestDto dto) {
-        NetworkRequest networkRequest = new NetworkRequest();
-        AwsNetworkParameters networkParameters = new AwsNetworkParameters();
-        networkParameters.setSubnetId(getSubnetId());
-        networkParameters.setVpcId(getVpcId());
-        networkRequest.setAws(networkParameters);
-        return networkRequest;
     }
 
     @Override
@@ -490,6 +478,19 @@ public class AwsCloudProvider extends AbstractCloudProvider {
     @Override
     public String getStorageOptimizedInstanceType() {
         return awsProperties.getStorageOptimizedInstance().getType();
+    }
+
+    @Override
+    public void assertServiceEndpoint(EnvironmentTestDto environmentTestDto) {
+        ServiceEndpointCreation serviceEndpointCreationRequest = Optional.ofNullable(environmentTestDto.getRequest().getNetwork().getServiceEndpointCreation())
+                .orElse(ServiceEndpointCreation.DISABLED);
+        ServiceEndpointCreation serviceEndpointCreationResponse = environmentTestDto.getResponse().getNetwork().getServiceEndpointCreation();
+        if (serviceEndpointCreationResponse != serviceEndpointCreationRequest) {
+            String message = String.format("Service endpoint creation is expected to be %s, but is %s", serviceEndpointCreationRequest,
+                    serviceEndpointCreationResponse);
+            LOGGER.error(message);
+            throw new TestFailException(message);
+        }
     }
 
     private AttachedFreeIpaRequest getAttachedFreeIpaRequest() {
