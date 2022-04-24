@@ -2,6 +2,7 @@ package com.sequenceiq.it.cloudbreak.cloud.v4.aws;
 
 import static java.lang.String.format;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
@@ -9,6 +10,7 @@ import java.util.UUID;
 
 import javax.inject.Inject;
 
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -42,6 +44,7 @@ import com.sequenceiq.environment.api.v1.environment.model.request.aws.AwsEnviro
 import com.sequenceiq.environment.api.v1.environment.model.request.aws.AwsFreeIpaParameters;
 import com.sequenceiq.environment.api.v1.environment.model.request.aws.AwsFreeIpaSpotParameters;
 import com.sequenceiq.environment.api.v1.environment.model.request.aws.S3GuardRequestParameters;
+import com.sequenceiq.environment.api.v1.environment.model.response.DetailedEnvironmentResponse;
 import com.sequenceiq.freeipa.api.v1.freeipa.stack.model.common.network.AwsNetworkParameters;
 import com.sequenceiq.freeipa.api.v1.freeipa.stack.model.common.network.NetworkRequest;
 import com.sequenceiq.it.cloudbreak.CloudbreakClient;
@@ -534,5 +537,30 @@ public class AwsCloudProvider extends AbstractCloudProvider {
         return environmentEncryption
                 ? awsProperties.getDiskEncryption().getEnvironmentKey()
                 : awsProperties.getDiskEncryption().getDatahubKey();
+    }
+
+    @Override
+    public void verifyDiskEncryptionKey(DetailedEnvironmentResponse environment, String environmentName) {
+        String encryptionKeyArn = environment.getAws().getAwsDiskEncryptionParameters().getEncryptionKeyArn();
+        if (StringUtils.isEmpty(encryptionKeyArn)) {
+            LOGGER.error(format("KMS key is not available for '%s' environment!", environmentName));
+            throw new TestFailException(format("KMS key is not available for '%s' environment!", environmentName));
+        } else {
+            LOGGER.info(format("Environment '%s' create has been done with '%s' KMS key.", environmentName, encryptionKeyArn));
+            Log.then(LOGGER, format(" Environment '%s' create has been done with '%s' KMS key. ", environmentName, encryptionKeyArn));
+        }
+    }
+
+    @Override
+    public void verifyVolumeEncryptionKey(String resourceName, List<String> instanceIds, String environmentName, String resourceGroupName) {
+        String kmsKeyArn = getEncryptionKeyArn(true);
+        List<String> volumeKmsKeyIds = new ArrayList<>(awsCloudFunctionality.listVolumeEncryptionKeyIds(resourceName, null, instanceIds));
+        if (volumeKmsKeyIds.stream().noneMatch(keyId -> keyId.equalsIgnoreCase(kmsKeyArn))) {
+            LOGGER.error(format("Volume has not been encrypted with '%s' KMS key!", kmsKeyArn));
+            throw new TestFailException(format("Volume has not been encrypted with '%s' KMS key!", kmsKeyArn));
+        } else {
+            LOGGER.info(format("Volume has been encrypted with '%s' KMS key.", kmsKeyArn));
+            Log.then(LOGGER, format(" Volume has been encrypted with '%s' KMS key. ", kmsKeyArn));
+        }
     }
 }

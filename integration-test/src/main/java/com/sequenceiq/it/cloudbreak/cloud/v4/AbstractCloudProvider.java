@@ -17,6 +17,7 @@ import com.sequenceiq.common.api.telemetry.request.LoggingRequest;
 import com.sequenceiq.common.api.type.ServiceEndpointCreation;
 import com.sequenceiq.distrox.api.v1.distrox.model.network.InstanceGroupNetworkV1Request;
 import com.sequenceiq.environment.api.v1.environment.model.request.AttachedFreeIpaRequest;
+import com.sequenceiq.environment.api.v1.environment.model.response.DetailedEnvironmentResponse;
 import com.sequenceiq.freeipa.api.v1.freeipa.stack.model.common.network.NetworkRequest;
 import com.sequenceiq.it.TestParameter;
 import com.sequenceiq.it.cloudbreak.CloudbreakClient;
@@ -309,5 +310,15 @@ public abstract class AbstractCloudProvider implements CloudProvider {
     public String getFreeIpaUpgradeImageCatalog() {
         LOGGER.warn("'freeIpaUpgradeImageCatalog' is not implemented");
         return null;
+    }
+
+    @Override
+    public void verifyDiskEncryptionKey(DetailedEnvironmentResponse environment, String environmentName) {
+        LOGGER.warn("Disk encryption feature is not available currently");
+    }
+
+    @Override
+    public void verifyVolumeEncryptionKey(String resourceName, List<String> instanceIds, String environmentName, String resourceGroupName) {
+        LOGGER.warn("Disk encryption feature is not available currently");
     }
 }

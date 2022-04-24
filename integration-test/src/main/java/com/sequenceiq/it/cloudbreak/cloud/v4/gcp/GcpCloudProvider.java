@@ -2,6 +2,7 @@ package com.sequenceiq.it.cloudbreak.cloud.v4.gcp;
 
 import static java.lang.String.format;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -32,6 +33,7 @@ import com.sequenceiq.environment.api.v1.environment.model.EnvironmentNetworkGcp
 import com.sequenceiq.environment.api.v1.environment.model.request.SecurityAccessRequest;
 import com.sequenceiq.environment.api.v1.environment.model.request.gcp.GcpEnvironmentParameters;
 import com.sequenceiq.environment.api.v1.environment.model.request.gcp.GcpResourceEncryptionParameters;
+import com.sequenceiq.environment.api.v1.environment.model.response.DetailedEnvironmentResponse;
 import com.sequenceiq.freeipa.api.v1.freeipa.stack.model.common.network.GcpNetworkParameters;
 import com.sequenceiq.freeipa.api.v1.freeipa.stack.model.common.network.NetworkRequest;
 import com.sequenceiq.it.cloudbreak.CloudbreakClient;
@@ -509,5 +511,32 @@ public class GcpCloudProvider extends AbstractCloudProvider {
         return environmentEncryption
                 ? gcpProperties.getDiskEncryption().getEnvironmentKey()
                 : gcpProperties.getDiskEncryption().getDatahubKey();
+    }
+
+    @Override
+    public void verifyDiskEncryptionKey(DetailedEnvironmentResponse environment, String environmentName) {
+        String encryptionKey = environment.getGcp().getGcpResourceEncryptionParameters().getEncryptionKey();
+        if (org.apache.commons.lang3.StringUtils.isEmpty(encryptionKey)) {
+            LOGGER.error(format("KMS key is not available for '%s' environment!", environmentName));
+            throw new TestFailException(format("KMS key is not available for '%s' environment!", environmentName));
+        } else {
+            LOGGER.info(format("Environment '%s' create has been done with '%s' KMS key.", environmentName, encryptionKey));
+            Log.then(LOGGER, format(" Environment '%s' create has been done with '%s' KMS key. ", environmentName, encryptionKey));
+        }
+    }
+
+    @Override
+    public void verifyVolumeEncryptionKey(String resourceName, List<String> instanceIds, String environmentName, String resourceGroupName) {
+        String kmsKeyArn = getEncryptionKey(true);
+        List<String> volumeKmsKeyIds = new ArrayList<>(gcpCloudFunctionality.listVolumeEncryptionKeyIds(resourceName, null, instanceIds));
+        for (int i = 0; i < volumeKmsKeyIds.size(); i++) {
+            if (volumeKmsKeyIds.get(i).contains(kmsKeyArn)) {
+                LOGGER.info(format("Volume has been encrypted with '%s' KMS key.", kmsKeyArn));
+                Log.then(LOGGER, format(" Volume has been encrypted with '%s' KMS key. ", kmsKeyArn));
+            } else {
+                LOGGER.error(format("Volume has not been encrypted with '%s' KMS key!", kmsKeyArn));
+                throw new TestFailException(format("Volume has not been encrypted with '%s' KMS key!", kmsKeyArn));
+            }
+        }
     }
 }

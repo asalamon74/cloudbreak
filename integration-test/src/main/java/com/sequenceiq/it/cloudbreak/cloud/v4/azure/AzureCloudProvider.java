@@ -2,6 +2,7 @@ package com.sequenceiq.it.cloudbreak.cloud.v4.azure;
 
 import static java.lang.String.format;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -34,6 +35,7 @@ import com.sequenceiq.environment.api.v1.environment.model.request.azure.AzureEn
 import com.sequenceiq.environment.api.v1.environment.model.request.azure.AzureResourceEncryptionParameters;
 import com.sequenceiq.environment.api.v1.environment.model.request.azure.AzureResourceGroup;
 import com.sequenceiq.environment.api.v1.environment.model.request.azure.ResourceGroupUsage;
+import com.sequenceiq.environment.api.v1.environment.model.response.DetailedEnvironmentResponse;
 import com.sequenceiq.freeipa.api.v1.freeipa.stack.model.common.network.AzureNetworkParameters;
 import com.sequenceiq.freeipa.api.v1.freeipa.stack.model.common.network.NetworkRequest;
 import com.sequenceiq.it.cloudbreak.CloudbreakClient;
@@ -500,5 +502,32 @@ public class AzureCloudProvider extends AbstractCloudProvider {
 
     public String getEncryptionKeyUrl() {
         return azureProperties.getDiskEncryption().getEncryptionKeyUrl();
+    }
+
+    @Override
+    public void verifyDiskEncryptionKey(DetailedEnvironmentResponse environment, String environmentName) {
+        String diskEncryptionSetId = environment.getAzure().getResourceEncryptionParameters().getDiskEncryptionSetId();
+        if (StringUtils.isEmpty(diskEncryptionSetId)) {
+            LOGGER.error(format("DES key is not available for '%s' environment!", environmentName));
+            throw new TestFailException(format("DES key is not available for '%s' environment!", environmentName));
+        } else {
+            LOGGER.info(format("Environment '%s' create has been done with '%s' DES key.", environmentName, diskEncryptionSetId));
+            Log.then(LOGGER, format(" Environment '%s' create has been done with '%s' DES key. ", environmentName, diskEncryptionSetId));
+        }
+    }
+
+    @Override
+    public void verifyVolumeEncryptionKey(String resourceName, List<String> instanceIds, String environmentName, String resourceGroupName) {
+        String desKeyUrl = getEncryptionKeyUrl();
+        List<String> volumesDesId = new ArrayList<>(azureCloudFunctionality.listVolumeEncryptionKeyIds(resourceName, resourceGroupName, instanceIds));
+        volumesDesId.forEach(desId -> {
+            if (desId.contains("diskEncryptionSets/" + environmentName)) {
+                LOGGER.info(format("Volume has been encrypted with '%s' DES key.", desId));
+                Log.then(LOGGER, format(" Volume has been encrypted with '%s' DES key. ", desId));
+            } else {
+                LOGGER.error(format("Volume has not been encrypted with '%s' key!", desKeyUrl));
+                throw new TestFailException(format("Volume has not been encrypted with '%s' key!", desKeyUrl));
+            }
+        });
     }
 }

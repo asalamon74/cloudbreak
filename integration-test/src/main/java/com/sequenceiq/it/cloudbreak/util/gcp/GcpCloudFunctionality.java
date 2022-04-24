@@ -6,7 +6,6 @@ import java.util.Map;
 
 import javax.inject.Inject;
 
-import org.apache.commons.lang3.NotImplementedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -34,7 +33,7 @@ public class GcpCloudFunctionality implements CloudFunctionality {
 
     @Override
     public List<String> listVolumeEncryptionKeyIds(String clusterName, String resourceGroupName, List<String> instanceIds) {
-        throw new NotImplementedException("Not yet implemented on GCP");
+        return gcpUtil.listVolumeEncryptionKey(instanceIds);
     }
 
     @Override
