@@ -14,12 +14,22 @@ public class AzureEncryptionV4Parameters extends EncryptionParametersV4Base {
     @ApiModelProperty(value = ModelDescriptions.TemplateModelDescription.DISK_ENCRYPTION_SET_ID)
     private String diskEncryptionSetId;
 
+    private Boolean encryptionAtHostEnabled;
+
     public String getDiskEncryptionSetId() {
         return diskEncryptionSetId;
     }
 
     public void setDiskEncryptionSetId(String diskEncryptionSetId) {
         this.diskEncryptionSetId = diskEncryptionSetId;
+    }
+
+    public Boolean isEncryptionAtHostEnabled() {
+        return encryptionAtHostEnabled;
+    }
+
+    public void setEncryptionAtHostEnabled(Boolean encryptionAtHostEnabled) {
+        this.encryptionAtHostEnabled = encryptionAtHostEnabled;
     }
 
 }
