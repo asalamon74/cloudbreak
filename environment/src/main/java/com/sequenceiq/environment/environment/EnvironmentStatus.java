@@ -131,6 +131,8 @@ public enum EnvironmentStatus {
     UPGRADE_CCM_VALIDATION_FAILED(com.sequenceiq.environment.api.v1.environment.model.response.EnvironmentStatus.UPGRADE_CCM_VALIDATION_FAILED),
     UPGRADE_CCM_ON_FREEIPA_IN_PROGRESS(com.sequenceiq.environment.api.v1.environment.model.response.EnvironmentStatus.UPGRADE_CCM_ON_FREEIPA_IN_PROGRESS),
     UPGRADE_CCM_ON_FREEIPA_FAILED(com.sequenceiq.environment.api.v1.environment.model.response.EnvironmentStatus.UPGRADE_CCM_ON_FREEIPA_FAILED),
+    UPGRADE_CCM_TUNNEL_UPDATE_IN_PROGRESS(com.sequenceiq.environment.api.v1.environment.model.response.EnvironmentStatus.UPGRADE_CCM_TUNNEL_UPDATE_IN_PROGRESS),
+    UPGRADE_CCM_TUNNEL_UPDATE_FAILED(com.sequenceiq.environment.api.v1.environment.model.response.EnvironmentStatus.UPGRADE_CCM_TUNNEL_UPDATE_FAILED),
     UPGRADE_CCM_ON_DATALAKE_IN_PROGRESS(com.sequenceiq.environment.api.v1.environment.model.response.EnvironmentStatus.UPGRADE_CCM_ON_DATALAKE_IN_PROGRESS),
     UPGRADE_CCM_ON_DATALAKE_FAILED(com.sequenceiq.environment.api.v1.environment.model.response.EnvironmentStatus.UPGRADE_CCM_ON_DATALAKE_FAILED),
     UPGRADE_CCM_ON_DATAHUB_IN_PROGRESS(com.sequenceiq.environment.api.v1.environment.model.response.EnvironmentStatus.UPGRADE_CCM_ON_DATAHUB_IN_PROGRESS),
@@ -178,5 +180,17 @@ public enum EnvironmentStatus {
 
     public boolean isSuccessfullyDeleted() {
         return ARCHIVED == this;
+    }
+
+    public boolean isCcmUpgradeablePhase() {
+        return List.of(
+                AVAILABLE,
+                UPGRADE_CCM_VALIDATION_FAILED,
+                UPGRADE_CCM_ON_FREEIPA_FAILED,
+                UPGRADE_CCM_TUNNEL_UPDATE_FAILED,
+                UPGRADE_CCM_ON_DATALAKE_FAILED,
+                UPGRADE_CCM_ON_DATAHUB_FAILED,
+                UPGRADE_CCM_FAILED
+        ).contains(this);
     }
 }

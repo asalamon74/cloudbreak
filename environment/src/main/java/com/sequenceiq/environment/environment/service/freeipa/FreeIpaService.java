@@ -28,6 +28,7 @@ import com.sequenceiq.freeipa.api.v1.freeipa.user.model.SyncOperationStatus;
 import com.sequenceiq.freeipa.api.v1.freeipa.user.model.SynchronizationStatus;
 import com.sequenceiq.freeipa.api.v1.freeipa.user.model.SynchronizeAllUsersRequest;
 import com.sequenceiq.freeipa.api.v1.operation.OperationV1Endpoint;
+import com.sequenceiq.freeipa.api.v1.operation.model.OperationStatus;
 
 @Service
 public class FreeIpaService {
@@ -135,8 +136,7 @@ public class FreeIpaService {
         try {
             return ThreadBasedUserCrnProvider.doAsInternalActor(
                     regionAwareInternalCrnGeneratorFactory.iam().getInternalCrnForServiceAsString(),
-                    () ->
-                    userV1Endpoint.getSyncOperationStatusInternal(Crn.fromString(environmentCrn).getAccountId(), operationId));
+                    () -> userV1Endpoint.getSyncOperationStatusInternal(Crn.fromString(environmentCrn).getAccountId(), operationId));
         } catch (WebApplicationException e) {
             String errorMessage = webApplicationExceptionMessageExtractor.getErrorMessage(e);
             LOGGER.error(String.format("Failed to get user synchronization status from FreeIpa for environment '%s' due to: '%s'",
@@ -161,6 +161,30 @@ public class FreeIpaService {
             return Optional.ofNullable(operationV1Endpoint.getOperationProgressByEnvironmentCrn(environmentCrn, detailed));
         } catch (WebApplicationException e) {
             return Optional.empty();
+        }
+    }
+
+    public OperationStatus getOperationStatus(String operationId) {
+        String accountId = ThreadBasedUserCrnProvider.getAccountId();
+        try {
+            return operationV1Endpoint.getOperationStatus(operationId, accountId);
+        } catch (WebApplicationException e) {
+            String errorMessage = webApplicationExceptionMessageExtractor.getErrorMessage(e);
+            LOGGER.error("Failed to get operation status '{}' in account {} due to: '{}'", operationId, accountId, errorMessage, e);
+            throw new FreeIpaOperationFailedException(errorMessage, e);
+        }
+    }
+
+    public OperationStatus upgradeCcm(String environmentCrn) {
+        String userCrn = ThreadBasedUserCrnProvider.getUserCrn();
+        try {
+            return ThreadBasedUserCrnProvider.doAsInternalActor(
+                    regionAwareInternalCrnGeneratorFactory.iam().getInternalCrnForServiceAsString(),
+                    () -> freeIpaV1Endpoint.upgradeCcmInternal(environmentCrn, userCrn));
+        } catch (WebApplicationException e) {
+            String errorMessage = webApplicationExceptionMessageExtractor.getErrorMessage(e);
+            LOGGER.error("Failed to upgrade CCM on FreeIpa for environment {} due to: {}", environmentCrn, errorMessage, e);
+            throw new FreeIpaOperationFailedException(errorMessage, e);
         }
     }
 
