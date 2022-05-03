@@ -13,6 +13,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
@@ -25,6 +26,7 @@ import com.sequenceiq.cloudbreak.common.json.Json;
 import com.sequenceiq.freeipa.api.v1.freeipa.stack.model.common.instance.InstanceMetaDataResponse;
 import com.sequenceiq.it.cloudbreak.FreeIpaClient;
 import com.sequenceiq.it.cloudbreak.dto.AbstractSdxTestDto;
+import com.sequenceiq.it.cloudbreak.dto.distrox.DistroXTestDto;
 import com.sequenceiq.it.cloudbreak.dto.freeipa.FreeIpaTestDto;
 import com.sequenceiq.it.cloudbreak.dto.sdx.SdxTestDto;
 import com.sequenceiq.it.cloudbreak.exception.TestFailException;
@@ -133,7 +135,7 @@ public class SshJClientActions extends SshJClient {
     }
 
     public void checkAwsEphemeralDisksMounted(List<InstanceGroupV4Response> instanceGroups, List<String> hostGroupNames, String mountDirPrefix) {
-        Map<String, Pair<Integer, String>> deviceMountPointMappingsByIp = getDeviceMountPointMappingsByIp(instanceGroups, hostGroupNames);
+        Map<String, Pair<Integer, String>> deviceMountPointMappingsByIp = getDeviceMountPointMappingsByIp(instanceGroups, hostGroupNames, "hadoopfs");
         Map<String, Pair<Integer, String>> deviceDiskTypeMappingsByIp = getDeviceDiskTypeMappingsByIp(instanceGroups, hostGroupNames);
 
         for (Entry<String, Pair<Integer, String>> node : deviceDiskTypeMappingsByIp.entrySet()) {
@@ -150,11 +152,11 @@ public class SshJClientActions extends SshJClient {
                 LOGGER.error("No device mount point mappings found for node with IP {}!", node.getKey());
                 throw new TestFailException(String.format("No device mount point mappings found for node with IP %s!", node.getKey()));
             }
-            Map<String, String> mounPoints = new Json(deviceMountPointMappingsByIp.get(node.getKey()).getValue()).getMap().entrySet().stream()
+            Map<String, String> mountPoints = new Json(deviceMountPointMappingsByIp.get(node.getKey()).getValue()).getMap().entrySet().stream()
                     .collect(Collectors.toMap(Entry::getKey, x -> String.valueOf(x.getValue())));
 
             for (String device : ephemeralDisks.keySet()) {
-                String mountPoint = mounPoints.get(device);
+                String mountPoint = mountPoints.get(device);
                 if (mountPoint == null) {
                     LOGGER.error("No mount point found for ephemeral device {} on node with IP {}!", device, node.getKey());
                     throw new TestFailException(String.format("No mount point found for device %s on node with IP %s!", device, node.getKey()));
@@ -168,10 +170,10 @@ public class SshJClientActions extends SshJClient {
     }
 
     public Set<String> getAwsEphemeralVolumeMountPoints(List<InstanceGroupV4Response> instanceGroups, List<String> hostGroupNames) {
-        Map<String, Pair<Integer, String>> deviceMountPointMappingsByIp = getDeviceMountPointMappingsByIp(instanceGroups, hostGroupNames);
+        Map<String, Pair<Integer, String>> deviceMountPointMappingsByIp = getDeviceMountPointMappingsByIp(instanceGroups, hostGroupNames, "hadoopfs");
         Map<String, Pair<Integer, String>> deviceDiskTypeMappingsByIp = getDeviceDiskTypeMappingsByIp(instanceGroups, hostGroupNames);
 
-        Map<String, String> mounPoints = deviceDiskTypeMappingsByIp.entrySet().stream().findFirst()
+        Map<String, String> mountPoints = deviceDiskTypeMappingsByIp.entrySet().stream().findFirst()
                 .stream()
                 .map(node -> new Json(deviceMountPointMappingsByIp.get(node.getKey()).getValue()).getMap().entrySet())
                 .flatMap(Set::stream)
@@ -184,12 +186,12 @@ public class SshJClientActions extends SshJClient {
                         .collect(Collectors.toMap(Entry::getKey, x -> String.valueOf(x.getValue()))))
                 .map(Map::keySet)
                 .flatMap(Set::stream)
-                .map(mounPoints::get)
+                .map(mountPoints::get)
                 .collect(Collectors.toSet());
     }
 
     public void checkNoEphemeralDisksMounted(List<InstanceGroupV4Response> instanceGroups, List<String> hostGroupNames) {
-        Map<String, Pair<Integer, String>> deviceMountPointMappingsByIp = getDeviceMountPointMappingsByIp(instanceGroups, hostGroupNames);
+        Map<String, Pair<Integer, String>> deviceMountPointMappingsByIp = getDeviceMountPointMappingsByIp(instanceGroups, hostGroupNames, "hadoopfs");
         Map<String, Pair<Integer, String>> deviceDiskTypeMappingsByIp = getDeviceDiskTypeMappingsByIp(instanceGroups, hostGroupNames);
 
         for (Entry<String, Pair<Integer, String>> node : deviceDiskTypeMappingsByIp.entrySet()) {
@@ -215,11 +217,24 @@ public class SshJClientActions extends SshJClient {
         }
     }
 
-    private Map<String, Pair<Integer, String>> getDeviceMountPointMappingsByIp(List<InstanceGroupV4Response> instanceGroups, List<String> hostGroupNames) {
-        String diskMountPointListCmd =
-                "df | grep hadoopfs | awk '{print $1,$6}' | " +
-                        "sed -e \"s/\\(.*\\) \\(.*\\)/\\\"\\1\\\":\\\"\\2\\\"/\" | paste -s -d ',' | sed 's/.*/{\\0}/'";
+    public void checkAzureTemporalDisksMounted(List<InstanceGroupV4Response> instanceGroups, List<String> hostGroupNames, String mountDir) {
+        Map<String, Pair<Integer, String>> deviceMountPointMappingsByIp = getDeviceMountPointMappingsByIp(instanceGroups, hostGroupNames, mountDir);
+        deviceMountPointMappingsByIp.forEach((ip, outPair) -> {
+            if (StringUtils.isBlank(outPair.getValue()) || outPair.getKey() != 0) {
+                LOGGER.error("No mount point found '{}' on node with IP {}!", mountDir, ip);
+                throw new TestFailException(String.format("No mount point found '%s' on node with IP %s!", mountDir, ip));
+            } else if (!StringUtils.containsIgnoreCase(outPair.getValue(), mountDir)) {
+                LOGGER.error("Device incorrectly mounted to '{}' on node with IP {}!", mountDir, ip);
+                throw new TestFailException(String.format("Device incorrectly mounted to '%s' on node with IP %s!", mountDir, ip));
+            }
+        });
+    }
 
+    private Map<String, Pair<Integer, String>> getDeviceMountPointMappingsByIp(List<InstanceGroupV4Response> instanceGroups, List<String> hostGroupNames,
+            String mountDir) {
+        String diskMountPointListCmd =
+                "df | grep " + mountDir + " | awk '{print $1,$6}' | " +
+                        "sed -e \"s/\\(.*\\) \\(.*\\)/\\\"\\1\\\":\\\"\\2\\\"/\" | paste -s -d ',' | sed 's/.*/{\\0}/'";
         return getDistroXInstanceGroupIps(instanceGroups, hostGroupNames, false).stream()
                 .collect(Collectors.toMap(ip -> ip, ip -> executeSshCommand(ip, diskMountPointListCmd)));
     }
@@ -228,7 +243,6 @@ public class SshJClientActions extends SshJClient {
         String diskTypeListCmd =
                 "sudo nvme list | grep dev | awk '{print $1,$3,$4,$5,$6,$7}' | " +
                         "sed -e \"s/\\([^ ]*\\) \\(.*\\)/\\\"\\1\\\":\\\"\\2\\\"/\" | paste -s -d ',' | sed 's/.*/{\\0}/'";
-
         return getDistroXInstanceGroupIps(instanceGroups, hostGroupNames, false).stream()
                 .collect(Collectors.toMap(ip -> ip, ip -> executeSshCommand(ip, diskTypeListCmd)));
     }
@@ -312,19 +326,39 @@ public class SshJClientActions extends SshJClient {
         return quantity.get();
     }
 
-    public void checkAzureTemporalDisksMounted(List<InstanceGroupV4Response> instanceGroups, List<String> hostGroupNames, String mountDir) {
-        String diskMountPointListCmd =
-                "df | grep " + mountDir + " | awk '{print $1,$6}' | " +
-                        "sed -e \"s/\\(.*\\) \\(.*\\)/\\\"\\1\\\":\\\"\\2\\\"/\" | paste -s -d ',' | sed 's/.*/{\\0}/'";
+    public DistroXTestDto checkMeteringStatus(DistroXTestDto testDto, List<InstanceGroupV4Response> instanceGroups, List<String> hostGroupNames) {
+        String meteringStatusCommand = "sudo cdp-doctor metering status --format json";
+        Map<String, Pair<Integer, String>> meteringStatusReportByIp = getDistroXInstanceGroupIps(instanceGroups, hostGroupNames, false).stream()
+                .collect(Collectors.toMap(ip -> ip, ip -> executeSshCommand(ip, meteringStatusCommand)));
 
-        Map<String, Pair<Integer, String>> deviceMountPointMappingsByIp = getDistroXInstanceGroupIps(instanceGroups, hostGroupNames, false).stream()
-                .collect(Collectors.toMap(ip -> ip, ip -> executeSshCommand(ip, diskMountPointListCmd)));
-        Integer okStatusCode = 0;
-        deviceMountPointMappingsByIp.forEach((ip, outPair) -> {
-            if (outPair == null || !outPair.getKey().equals(okStatusCode)) {
-                LOGGER.error("Mount point {} should exist on node with IP {}!", mountDir, ip);
-                throw new TestFailException(String.format("Mount point %s should exist on node with IP %s!", mountDir, ip));
+        for (Entry<String, Pair<Integer, String>> meteringStatusReport : meteringStatusReportByIp.entrySet()) {
+            List<Integer> heartbeatEventCounts = new Json(meteringStatusReport.getValue().getValue()).getMap().entrySet().stream()
+                    .filter(status -> String.valueOf(status.getKey()).contains("heartbeatEventCount"))
+                    .map(Entry::getValue).collect(Collectors.toList())
+                        .stream()
+                        .map(countObject -> (Integer) countObject)
+                        .collect(Collectors.toList());
+            LOGGER.info(String.format("heartbeatEventCounts: %s", heartbeatEventCounts));
+            Log.log(LOGGER, format(" Found '%s' Metering Heartbeat Events at '%s' instance. ", heartbeatEventCounts, meteringStatusReport.getKey()));
+            if (CollectionUtils.isEmpty(heartbeatEventCounts) || heartbeatEventCounts.contains(0)) {
+                LOGGER.error("Metering Heartbeat Events does NOT generated on '{}' instance!", meteringStatusReport.getKey());
+                throw new TestFailException(String.format("Metering Heartbeat Events does NOT generated on '%s' instance!", meteringStatusReport.getKey()));
             }
-        });
+        }
+
+        for (Entry<String, Pair<Integer, String>> meteringStatusReport : meteringStatusReportByIp.entrySet()) {
+            List<String> heartbeatStatusesNotOk = new Json(meteringStatusReport.getValue().getValue()).getMap().entrySet().stream()
+                    .filter(status -> String.valueOf(status.getValue()).contains("NOK"))
+                    .map(Entry::getKey).collect(Collectors.toList());
+            if (CollectionUtils.isNotEmpty(heartbeatStatusesNotOk)) {
+                Log.log(LOGGER, format(" Found '%s' not OK at '%s' instance. ", heartbeatStatusesNotOk, meteringStatusReport.getKey()));
+                LOGGER.error("There is 'Not OK' Metering Heartbeat status {} is present on '{}' instance!", heartbeatStatusesNotOk,
+                        meteringStatusReport.getKey());
+                throw new TestFailException(String.format("There is 'Not OK' Metering Heartbeat status %s is present on '%s' instance!",
+                        heartbeatStatusesNotOk, meteringStatusReport.getKey()));
+            }
+        }
+
+        return testDto;
     }
 }
